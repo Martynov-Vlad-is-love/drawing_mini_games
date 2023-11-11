@@ -1,6 +1,7 @@
 import 'package:drawing_mini_games/model/draw_model.dart';
 import 'package:drawing_mini_games/view_model/drawing_painter.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:rxdart/rxdart.dart';
 
 class DrawScreen extends StatefulWidget {
@@ -13,11 +14,13 @@ class DrawScreen extends StatefulWidget {
 class _DrawScreenState extends State<DrawScreen> {
   List<List<DrawModel?>> history = [];
   List<List<DrawModel?>> redoHistory = [];
+
   final pointsStream = BehaviorSubject<List<DrawModel?>>.seeded([]);
   final sliderStrokeWidth = BehaviorSubject<double>.seeded(3.0);
+  final pickedColor = BehaviorSubject<Color>.seeded(Colors.black);
+
   final key = GlobalKey();
 
-  Color pickedColor = Colors.black;
   double pickedStrokeWidth = 20.0;
 
   @override
@@ -25,6 +28,10 @@ class _DrawScreenState extends State<DrawScreen> {
     pointsStream.close();
     sliderStrokeWidth.close();
     super.dispose();
+  }
+
+  void changeColor(Color color) {
+    pickedColor.value = color;
   }
 
   @override
@@ -40,26 +47,28 @@ class _DrawScreenState extends State<DrawScreen> {
               redoHistory.clear();
               final box = key.currentContext?.findRenderObject() as RenderBox;
               final paint = Paint();
-              paint.color = pickedColor;
+              paint.color = pickedColor.stream.value;
               paint.strokeWidth = sliderStrokeWidth.stream.value;
               paint.strokeCap = StrokeCap.round;
-              final points = [...pointsStream.value, DrawModel(
-                  box.globalToLocal(dragStartDetails.globalPosition),
-                  paint,
-                  Colors.black)];
+              final points = [
+                ...pointsStream.value,
+                DrawModel(box.globalToLocal(dragStartDetails.globalPosition),
+                    paint, Colors.black)
+              ];
               pointsStream.value = points;
               pointsStream.add(points);
             },
             onPanUpdate: (dragUpdateDetails) {
               final box = key.currentContext?.findRenderObject() as RenderBox;
               final paint = Paint();
-              paint.color = pickedColor;
+              paint.color = pickedColor.stream.value;
               paint.strokeWidth = sliderStrokeWidth.stream.value;
               paint.strokeCap = StrokeCap.round;
-              final points = [...pointsStream.value, DrawModel(
-                  box.globalToLocal(dragUpdateDetails.globalPosition),
-                  paint,
-                  Colors.black)];
+              final points = [
+                ...pointsStream.value,
+                DrawModel(box.globalToLocal(dragUpdateDetails.globalPosition),
+                    paint, Colors.black)
+              ];
               pointsStream.value = points;
               pointsStream.add(points);
             },
@@ -67,7 +76,6 @@ class _DrawScreenState extends State<DrawScreen> {
               final points = [...pointsStream.value, null];
               pointsStream.value = points;
               history.add(points);
-              print(history.length);
             },
             child: SizedBox(
               width: size.width,
@@ -88,25 +96,69 @@ class _DrawScreenState extends State<DrawScreen> {
             child: RotatedBox(
               quarterTurns: 3,
               child: StreamBuilder<double>(
-                stream: sliderStrokeWidth,
-                builder: (context, snapshot) {
-                  return Slider(
-                      min: 1,
-                      max: 20,
-                      value: sliderStrokeWidth.stream.value,
-                      onChanged: (value) {
-                        sliderStrokeWidth.value = value;
-                      });
-                }
-              ),
+                  stream: sliderStrokeWidth,
+                  builder: (context, snapshot) {
+                    return Slider(
+                      inactiveColor: Colors.black,
+                      activeColor: Colors.black,
+                      overlayColor: MaterialStateColor.resolveWith((states) => Colors.black),
+                        min: 1,
+                        max: 20,
+                        value: sliderStrokeWidth.stream.value,
+                        onChanged: (value) {
+                          sliderStrokeWidth.value = value;
+                        });
+                  }),
             ),
-          )
+          ),
+          Positioned(
+              top: MediaQuery.of(context).padding.top+20,
+              left: 20,
+              child: StreamBuilder<Object>(
+                  stream: pickedColor,
+                  builder: (context, snapshot) {
+                    return Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: pickedColor.stream.value,
+                      ),
+                      height: 40,
+                      width: 40,
+                      child: GestureDetector(
+                        onTap: () {
+                          showDialog(
+                            context: context,
+                            builder: (BuildContext context) {
+                              return AlertDialog(
+                                title: const Text('Pick a color!'),
+                                content: SingleChildScrollView(
+                                  child: ColorPicker(
+                                    pickerColor: pickedColor.stream.value,
+                                    onColorChanged: changeColor,
+                                  ),
+                                ),
+                                actions: <Widget>[
+                                  ElevatedButton(
+                                    child: const Text('Got it'),
+                                    onPressed: () {
+                                      Navigator.of(context).pop();
+                                    },
+                                  ),
+                                ],
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    );
+                  }))
         ],
       ),
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
           FloatingActionButton(
+            backgroundColor: Colors.brown,
             heroTag: "Undo",
             onPressed: () async {
               if (history.isNotEmpty) {
@@ -125,6 +177,7 @@ class _DrawScreenState extends State<DrawScreen> {
             width: 30,
           ),
           FloatingActionButton(
+            backgroundColor: Colors.brown,
             heroTag: "Redo",
             onPressed: () {
               if (redoHistory.isNotEmpty) {
