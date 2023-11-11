@@ -1,3 +1,4 @@
+import 'package:drawing_mini_games/project/routes/routes.dart';
 import 'package:drawing_mini_games/view/screen/draw_screen.dart';
 import 'package:drawing_mini_games/view/screen/home_screen.dart';
 import 'package:flutter/material.dart';
@@ -12,10 +13,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       initialRoute: '/',
-      routes: {
-        '/': (context) => const HomeScreen(),
-        '/draw': (context) => const DrawScreen(),
-      },
+      routes: appRoutes,
     );
   }
 }
