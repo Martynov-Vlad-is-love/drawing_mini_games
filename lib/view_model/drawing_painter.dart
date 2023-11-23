@@ -12,37 +12,26 @@ class DrawingPainter extends CustomPainter{
   void paint(Canvas canvas, Size size) {
     for (final pointsList in history) {
       for (int i = 0; i < pointsList.length - 1; i++) {
-        if (pointsList[i] != null && pointsList[i + 1] != null) {
-          final firstOffset = pointsList[i]?.offset;
-          final secondOffset = pointsList[i + 1]?.offset;
-          final paint = pointsList[i]?.paint;
-          canvas.drawLine(firstOffset!, secondOffset!, paint!);
-        } else if (pointsList[i] != null && pointsList[i + 1] == null) {
-          List<Offset> offsetList = [];
-          offsetList.add(pointsList[i]!.offset);
-          canvas.drawPoints(PointMode.points, offsetList, pointsList[i]!.paint);
+        final currentPoint = pointsList[i];
+        final nextPoint = pointsList[i + 1];
+
+        if (currentPoint != null) {
+          final paint = currentPoint.paint;
+          final firstOffset = currentPoint.offset;
+
+          if (nextPoint != null) {
+            final secondOffset = nextPoint.offset;
+            canvas.drawLine(firstOffset, secondOffset, paint);
+          } else {
+            canvas.drawPoints(PointMode.points, [firstOffset], paint);
+          }
         }
       }
     }
-
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return true;
   }
-
 }
-
-// for(int i = 0; i < pointsList.length-1; i++) {
-//   if(pointsList[i] != null && pointsList[i+1] != null){
-//     final firstOffset = pointsList[i]?.offset;
-//     final secondOffset = pointsList[i+1]?.offset;
-//     final paint = pointsList[i]?.paint;
-//     canvas.drawLine(firstOffset!, secondOffset!, paint!);
-//   }else if(pointsList[i] != null && pointsList[i+1] == null){
-//     List<Offset> offsetList = [];
-//     offsetList.add(pointsList[i]!.offset);
-//     canvas.drawPoints(PointMode.points, offsetList, pointsList[i]!.paint);
-//   }
-// }

@@ -20,7 +20,7 @@ class _MainButtonState extends State<MainButton> {
     return AnimatedContainer(
         height: 70,
         width: 200,
-        duration: const Duration(milliseconds: 700),
+        duration: const Duration(milliseconds: 600),
         color: isTapped ? Colors.black87 : Colors.brown,
         curve: Curves.fastOutSlowIn,
         child: ElevatedButton(

@@ -1,7 +1,10 @@
+import 'dart:math';
+
 import 'package:drawing_mini_games/model/draw_model.dart';
+import 'package:drawing_mini_games/view/widget/color_picker_button.dart';
+import 'package:drawing_mini_games/view/widget/custom_slider.dart';
 import 'package:drawing_mini_games/view_model/drawing_painter.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:rxdart/rxdart.dart';
 
 class DrawScreen extends StatefulWidget {
@@ -14,6 +17,7 @@ class DrawScreen extends StatefulWidget {
 class _DrawScreenState extends State<DrawScreen> {
   List<List<DrawModel?>> history = [];
   List<List<DrawModel?>> redoHistory = [];
+  List<DrawModel?> points = List.filled(100000, null);
 
   final pointsStream = BehaviorSubject<List<DrawModel?>>.seeded([]);
   final sliderStrokeWidth = BehaviorSubject<double>.seeded(3.0);
@@ -21,19 +25,18 @@ class _DrawScreenState extends State<DrawScreen> {
 
   final key = GlobalKey();
 
-  double pickedStrokeWidth = 20.0;
-
   @override
   void dispose() {
     pointsStream.close();
     sliderStrokeWidth.close();
+    pickedColor.close();
     super.dispose();
   }
-
-  void changeColor(Color color) {
-    pickedColor.value = color;
+  double _distanceBetweenPoints(Offset point1, Offset point2) {
+    final dx = point1.dx - point2.dx;
+    final dy = point1.dy - point2.dy;
+    return sqrt(dx * dx + dy * dy);
   }
-
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.of(context).size;
@@ -50,13 +53,13 @@ class _DrawScreenState extends State<DrawScreen> {
               paint.color = pickedColor.stream.value;
               paint.strokeWidth = sliderStrokeWidth.stream.value;
               paint.strokeCap = StrokeCap.round;
-              final points = [
+              points = [
                 ...pointsStream.value,
-                DrawModel(box.globalToLocal(dragStartDetails.globalPosition),
-                    paint, Colors.black)
+                DrawModel(
+                    box.globalToLocal(dragStartDetails.globalPosition), paint)
               ];
-              pointsStream.value = points;
-              pointsStream.add(points);
+              pointsStream.value = List.from(points);
+              pointsStream.add(List.from(points));
             },
             onPanUpdate: (dragUpdateDetails) {
               final box = key.currentContext?.findRenderObject() as RenderBox;
@@ -64,18 +67,21 @@ class _DrawScreenState extends State<DrawScreen> {
               paint.color = pickedColor.stream.value;
               paint.strokeWidth = sliderStrokeWidth.stream.value;
               paint.strokeCap = StrokeCap.round;
-              final points = [
-                ...pointsStream.value,
-                DrawModel(box.globalToLocal(dragUpdateDetails.globalPosition),
-                    paint, Colors.black)
-              ];
-              pointsStream.value = points;
-              pointsStream.add(points);
+              final currentPoint = box.globalToLocal(dragUpdateDetails.globalPosition);
+              if (points.isEmpty ||
+                  _distanceBetweenPoints(currentPoint, points.last!.offset) > 5) {
+                points.add(DrawModel(currentPoint, paint));
+                pointsStream.value = List.from(points);
+                pointsStream.add(List.from(points));
+              }
+              if (points.length % 10 == 0) {
+                print(points.length);
+              }
             },
             onPanEnd: (dragEndDetails) {
-              final points = [...pointsStream.value, null];
-              pointsStream.value = points;
-              history.add(points);
+              points.add(null);
+              pointsStream.value = List.from(points);
+              history.add(List.from(points));
             },
             child: SizedBox(
               width: size.width,
@@ -98,59 +104,17 @@ class _DrawScreenState extends State<DrawScreen> {
               child: StreamBuilder<double>(
                   stream: sliderStrokeWidth,
                   builder: (context, snapshot) {
-                    return Slider(
-                      inactiveColor: Colors.black,
-                      activeColor: Colors.black,
-                      overlayColor: MaterialStateColor.resolveWith((states) => Colors.black),
-                        min: 1,
-                        max: 20,
-                        value: sliderStrokeWidth.stream.value,
-                        onChanged: (value) {
-                          sliderStrokeWidth.value = value;
-                        });
+                    return CustomSlider(sliderStrokeWidth: sliderStrokeWidth);
                   }),
             ),
           ),
           Positioned(
-              top: MediaQuery.of(context).padding.top+20,
+              top: MediaQuery.of(context).padding.top + 20,
               left: 20,
               child: StreamBuilder<Object>(
                   stream: pickedColor,
                   builder: (context, snapshot) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: pickedColor.stream.value,
-                      ),
-                      height: 40,
-                      width: 40,
-                      child: GestureDetector(
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return AlertDialog(
-                                title: const Text('Pick a color!'),
-                                content: SingleChildScrollView(
-                                  child: ColorPicker(
-                                    pickerColor: pickedColor.stream.value,
-                                    onColorChanged: changeColor,
-                                  ),
-                                ),
-                                actions: <Widget>[
-                                  ElevatedButton(
-                                    child: const Text('Got it'),
-                                    onPressed: () {
-                                      Navigator.of(context).pop();
-                                    },
-                                  ),
-                                ],
-                              );
-                            },
-                          );
-                        },
-                      ),
-                    );
+                    return ColorPickerButton(pickedColor: pickedColor);
                   }))
         ],
       ),

@@ -1,4 +1,4 @@
-import 'package:drawing_mini_games/view/widget/main_button.dart';
+ import 'package:drawing_mini_games/view/widget/main_button.dart';
 import 'package:flutter/material.dart';
 
 class HomeScreen extends StatefulWidget {
